@@ -1,0 +1,40 @@
+services:
+  registry:
+    build: .
+    command: uvicorn registry.app:app --host 0.0.0.0 --port 8000
+    ports:
+      - "8000:8000"
+
+  kubernetes-agent:
+    build: .
+    command: uvicorn agents.kubernetes.app:app --host 0.0.0.0 --port 8001
+    environment:
+      REGISTRY_URL: http://registry:8000
+      PUBLIC_URL: http://kubernetes-agent:8001
+    depends_on:
+      - registry
+    ports:
+      - "8001:8001"
+
+  metrics-agent:
+    build: .
+    command: uvicorn agents.metrics.app:app --host 0.0.0.0 --port 8002
+    environment:
+      REGISTRY_URL: http://registry:8000
+      PUBLIC_URL: http://metrics-agent:8002
+    depends_on:
+      - registry
+    ports:
+      - "8002:8002"
+
+  coordinator:
+    build: .
+    command: uvicorn coordinator.app:app --host 0.0.0.0 --port 8003
+    environment:
+      REGISTRY_URL: http://registry:8000
+    depends_on:
+      - registry
+      - kubernetes-agent
+      - metrics-agent
+    ports:
+      - "8003:8003"
